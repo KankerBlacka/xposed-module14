@@ -39,7 +39,8 @@ jobs:
         chmod +x gradlew
         # Remove corrupted wrapper and regenerate
         rm -f gradle/wrapper/gradle-wrapper.jar
-        ./gradlew wrapper --gradle-version=7.6 --distribution-type=bin
+        # Use gradle directly to regenerate wrapper
+        gradle wrapper --gradle-version=7.6 --distribution-type=bin
         
     - name: Build Debug APK
       run: ./gradlew assembleDebug --no-daemon
