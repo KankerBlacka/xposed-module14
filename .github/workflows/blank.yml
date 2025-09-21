@@ -34,26 +34,15 @@ jobs:
           ~/.gradle/wrapper
         key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
         
-    - name: Debug and Fix Configuration
+    - name: Ultra-Simple Configuration
       run: |
-        echo "=== DEBUGGING ORIGINAL FILES ==="
-        echo "Original build.gradle:"
-        cat build.gradle || echo "No build.gradle found"
-        echo ""
-        echo "Original app/build.gradle:"
-        cat app/build.gradle || echo "No app/build.gradle found"
-        echo ""
-        echo "Original settings.gradle:"
-        cat settings.gradle || echo "No settings.gradle found"
-        echo ""
-        
         # Remove ALL existing gradle files
         rm -f build.gradle
         rm -f settings.gradle
         rm -f gradle.properties
         rm -f app/build.gradle
         
-        # Create clean build.gradle
+        # Create ultra-simple build.gradle
         cat > build.gradle << 'EOF'
         buildscript {
             repositories {
@@ -66,7 +55,11 @@ jobs:
         }
 
         allprojects {
-            // No repositories - all defined in settings.gradle
+            repositories {
+                google()
+                mavenCentral()
+                maven { url 'https://api.xposed.info/' }
+            }
         }
 
         task clean(type: Delete) {
@@ -74,37 +67,13 @@ jobs:
         }
         EOF
         
-        # Create clean settings.gradle
+        # Create ultra-simple settings.gradle
         cat > settings.gradle << 'EOF'
-        pluginManagement {
-            repositories {
-                gradlePluginPortal()
-                google()
-                mavenCentral()
-            }
-        }
-        dependencyResolutionManagement {
-            repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
-            repositories {
-                gradlePluginPortal()
-                google()
-                mavenCentral()
-                maven { url 'https://api.xposed.info/' }
-            }
-        }
-
         rootProject.name = "XposedModule"
         include ':app'
         EOF
         
-        # Create gradle.properties
-        cat > gradle.properties << 'EOF'
-        org.gradle.unsafe.configuration-cache=false
-        org.gradle.unsafe.isolated-projects=false
-        org.gradle.dependency.verification=off
-        EOF
-        
-        # Create clean app/build.gradle with NO module() calls
+        # Create ultra-simple app/build.gradle
         cat > app/build.gradle << 'EOF'
         plugins {
             id 'com.android.application'
@@ -125,11 +94,9 @@ jobs:
             buildTypes {
                 release {
                     minifyEnabled false
-                    proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
                 }
                 debug {
                     minifyEnabled false
-                    debuggable true
                 }
             }
             
@@ -141,28 +108,14 @@ jobs:
 
         dependencies {
             compileOnly 'de.robv.android.xposed:api:82'
-            compileOnly 'de.robv.android.xposed:api:82:sources'
             implementation 'androidx.appcompat:appcompat:1.6.1'
-            implementation 'com.google.android.material:material:1.10.0'
-            implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
         }
         EOF
         
-        echo "=== NEW FILES CREATED ==="
-        echo "New build.gradle:"
-        cat build.gradle
-        echo ""
-        echo "New app/build.gradle:"
-        cat app/build.gradle
-        echo ""
-        echo "New settings.gradle:"
-        cat settings.gradle
-        echo ""
-        
-        # Fix gradle wrapper
+        # Use very old Gradle version
         chmod +x gradlew
         rm -f gradle/wrapper/gradle-wrapper.jar
-        gradle wrapper --gradle-version=7.6 --distribution-type=bin
+        gradle wrapper --gradle-version=6.7.1 --distribution-type=bin
         
     - name: Build Debug APK
       run: ./gradlew assembleDebug --no-daemon
