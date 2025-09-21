@@ -114,7 +114,6 @@ jobs:
         
         dependencies {
             compileOnly 'de.robv.android.xposed:api:82'
-            implementation 'androidx.appcompat:appcompat:1.6.1'
         }
         EOF
         
@@ -168,6 +167,25 @@ jobs:
         <?xml version="1.0" encoding="utf-8"?>
         <resources>
             <string name="app_name">Xposed Module</string>
+        </resources>
+        EOF
+        
+        # Create themes.xml
+        cat > app/src/main/res/values/themes.xml << 'EOF'
+        <?xml version="1.0" encoding="utf-8"?>
+        <resources>
+            <style name="AppTheme" parent="android:Theme">
+                <item name="android:label">@string/app_name</item>
+            </style>
+        </resources>
+        EOF
+        
+        # Create colors.xml
+        cat > app/src/main/res/values/colors.xml << 'EOF'
+        <?xml version="1.0" encoding="utf-8"?>
+        <resources>
+            <color name="white">#FFFFFF</color>
+            <color name="black">#000000</color>
         </resources>
         EOF
         
