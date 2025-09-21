@@ -33,16 +33,33 @@ jobs:
           ~/.gradle/caches
           ~/.gradle/wrapper
         key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
         
-    - name: Ultra-Simple Configuration
+    - name: Setup Build Configuration
       run: |
-        # Remove ALL existing gradle files
-        rm -f build.gradle
-        rm -f settings.gradle
+        # Clean up any existing gradle files
+        rm -rf .gradle/
+        rm -f build.gradle build.gradle.kts
+        rm -f settings.gradle settings.gradle.kts
         rm -f gradle.properties
-        rm -f app/build.gradle
+        rm -f app/build.gradle app/build.gradle.kts
+        rm -rf gradle/wrapper/
         
-        # Create ultra-simple build.gradle
+        # Create gradle wrapper directory
+        mkdir -p gradle/wrapper
+        
+        # Create gradle-wrapper.properties with compatible version
+        cat > gradle/wrapper/gradle-wrapper.properties << 'EOF'
+        distributionBase=GRADLE_USER_HOME
+        distributionPath=wrapper/dists
+        distributionUrl=https\://services.gradle.org/distributions/gradle-8.1.1-bin.zip
+        networkTimeout=10000
+        zipStoreBase=GRADLE_USER_HOME
+        zipStorePath=wrapper/dists
+        EOF
+        
+        # Create root build.gradle
         cat > build.gradle << 'EOF'
         buildscript {
             repositories {
@@ -50,10 +67,10 @@ jobs:
                 mavenCentral()
             }
             dependencies {
-                classpath 'com.android.tools.build:gradle:7.4.2'
+                classpath 'com.android.tools.build:gradle:8.1.1'
             }
         }
-
+        
         allprojects {
             repositories {
                 google()
@@ -61,28 +78,54 @@ jobs:
                 maven { url 'https://api.xposed.info/' }
             }
         }
-
+        
         task clean(type: Delete) {
             delete rootProject.buildDir
         }
         EOF
         
-        # Create ultra-simple settings.gradle
+        # Create settings.gradle
         cat > settings.gradle << 'EOF'
+        pluginManagement {
+            repositories {
+                google()
+                mavenCentral()
+                gradlePluginPortal()
+            }
+        }
+        dependencyResolutionManagement {
+            repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+            repositories {
+                google()
+                mavenCentral()
+                maven { url 'https://api.xposed.info/' }
+            }
+        }
         rootProject.name = "XposedModule"
         include ':app'
         EOF
         
-        # Create ultra-simple app/build.gradle
+        # Create gradle.properties
+        cat > gradle.properties << 'EOF'
+        org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+        android.useAndroidX=true
+        android.nonTransitiveRClass=true
+        EOF
+        
+        # Create app directory if it doesn't exist
+        mkdir -p app/src/main/java/com/example/xposedmodule
+        mkdir -p app/src/main/res/values
+        
+        # Create app/build.gradle
         cat > app/build.gradle << 'EOF'
         plugins {
             id 'com.android.application'
         }
-
+        
         android {
             namespace 'com.example.xposedmodule'
             compileSdk 34
-
+            
             defaultConfig {
                 applicationId "com.example.xposedmodule"
                 minSdk 21
@@ -90,10 +133,11 @@ jobs:
                 versionCode 1
                 versionName "1.0"
             }
-
+            
             buildTypes {
                 release {
                     minifyEnabled false
+                    proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
                 }
                 debug {
                     minifyEnabled false
@@ -101,24 +145,82 @@ jobs:
             }
             
             compileOptions {
-                sourceCompatibility JavaVersion.VERSION_11
-                targetCompatibility JavaVersion.VERSION_11
+                sourceCompatibility JavaVersion.VERSION_17
+                targetCompatibility JavaVersion.VERSION_17
             }
         }
-
+        
         dependencies {
             compileOnly 'de.robv.android.xposed:api:82'
             implementation 'androidx.appcompat:appcompat:1.6.1'
         }
         EOF
         
-        # Use very old Gradle version
-        chmod +x gradlew
-        rm -f gradle/wrapper/gradle-wrapper.jar
-        gradle wrapper --gradle-version=6.7.1 --distribution-type=bin
+        # Create a basic AndroidManifest.xml if it doesn't exist
+        mkdir -p app/src/main
+        if [ ! -f app/src/main/AndroidManifest.xml ]; then
+          cat > app/src/main/AndroidManifest.xml << 'EOF'
+        <?xml version="1.0" encoding="utf-8"?>
+        <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+            <application
+                android:allowBackup="true"
+                android:label="Xposed Module"
+                android:theme="@style/Theme.AppCompat">
+                
+                <meta-data
+                    android:name="xposedmodule"
+                    android:value="true" />
+                <meta-data
+                    android:name="xposeddescription"
+                    android:value="LSPosed Module" />
+                <meta-data
+                    android:name="xposedminversion"
+                    android:value="82" />
+            </application>
+        </manifest>
+        EOF
+        fi
         
+        # Create a basic Main class if it doesn't exist
+        if [ ! -f app/src/main/java/com/example/xposedmodule/Main.java ]; then
+          cat > app/src/main/java/com/example/xposedmodule/Main.java << 'EOF'
+        package com.example.xposedmodule;
+        
+        import de.robv.android.xposed.IXposedHookLoadPackage;
+        import de.robv.android.xposed.XposedBridge;
+        import de.robv.android.xposed.callbacks.XC_LoadPackage;
+        
+        public class Main implements IXposedHookLoadPackage {
+            @Override
+            public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
+                XposedBridge.log("Module loaded: " + lpparam.packageName);
+            }
+        }
+        EOF
+        fi
+        
+        # Create xposed_init file
+        mkdir -p app/src/main/assets
+        echo "com.example.xposedmodule.Main" > app/src/main/assets/xposed_init
+        
+        # Download gradle wrapper jar if it doesn't exist
+        if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
+          curl -L https://github.com/gradle/gradle/raw/v8.1.1/gradle/wrapper/gradle-wrapper.jar \
+            -o gradle/wrapper/gradle-wrapper.jar
+        fi
+        
+        # Create gradlew script if it doesn't exist
+        if [ ! -f gradlew ]; then
+          curl -L https://raw.githubusercontent.com/gradle/gradle/v8.1.1/gradlew \
+            -o gradlew
+          chmod +x gradlew
+        fi
+        
+    - name: Make gradlew executable
+      run: chmod +x gradlew
+      
     - name: Build Debug APK
-      run: ./gradlew assembleDebug --no-daemon
+      run: ./gradlew assembleDebug --no-daemon --stacktrace
         
     - name: Upload Debug APK
       uses: actions/upload-artifact@v4
@@ -126,16 +228,31 @@ jobs:
         name: lsposed-module-debug-apk
         path: app/build/outputs/apk/debug/app-debug.apk
         
+    - name: Build Release APK
+      run: ./gradlew assembleRelease --no-daemon --stacktrace
+      
+    - name: Upload Release APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: lsposed-module-release-apk
+        path: app/build/outputs/apk/release/app-release-unsigned.apk
+        
     - name: Build Success Summary
+      if: success()
       run: |
         echo "### 🎉 LSPosed Module Build Complete!" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "✅ **Status**: Build Successful" >> $GITHUB_STEP_SUMMARY
-        echo "📦 **APK Size**: $(du -h app/build/outputs/apk/debug/app-debug.apk | cut -f1)" >> $GITHUB_STEP_SUMMARY
+        if [ -f app/build/outputs/apk/debug/app-debug.apk ]; then
+          echo "📦 **Debug APK Size**: $(du -h app/build/outputs/apk/debug/app-debug.apk | cut -f1)" >> $GITHUB_STEP_SUMMARY
+        fi
+        if [ -f app/build/outputs/apk/release/app-release-unsigned.apk ]; then
+          echo "📦 **Release APK Size**: $(du -h app/build/outputs/apk/release/app-release-unsigned.apk | cut -f1)" >> $GITHUB_STEP_SUMMARY
+        fi
         echo "⬇️ **Download**: Check the 'Artifacts' section below" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### 📱 Installation Instructions" >> $GITHUB_STEP_SUMMARY
         echo "1. Download the APK from artifacts" >> $GITHUB_STEP_SUMMARY
         echo "2. Install on your Android device" >> $GITHUB_STEP_SUMMARY
         echo "3. Enable in LSPosed Manager" >> $GITHUB_STEP_SUMMARY
-        echo "4. Select target apps and reboot" >> $GITHUB_STEP_SUMMARY
+        echo "4. Select target apps and reboot" >> $GITHUB_STEP_SUM
