@@ -31,6 +31,7 @@ jobs:
         # Clean and create directory structure
         rm -rf .gradle/ build/ app/build/ gradle/ gradlew gradlew.bat
         rm -f build.gradle settings.gradle gradle.properties local.properties app/build.gradle
+        rm -rf app/src/main/res/layout/
         
         mkdir -p app/src/main/java/com/example/xposedmodule
         mkdir -p app/src/main/res/values
@@ -187,6 +188,25 @@ jobs:
             <color name="white">#FFFFFF</color>
             <color name="black">#000000</color>
         </resources>
+        EOF
+        
+        # Create simple layout (no complex dependencies)
+        mkdir -p app/src/main/res/layout
+        cat > app/src/main/res/layout/activity_main.xml << 'EOF'
+        <?xml version="1.0" encoding="utf-8"?>
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:padding="16dp">
+            
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/app_name"
+                android:textSize="18sp" />
+                
+        </LinearLayout>
         EOF
         
     - name: Setup Gradle Wrapper
