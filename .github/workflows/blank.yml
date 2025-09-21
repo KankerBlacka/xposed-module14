@@ -37,31 +37,23 @@ jobs:
     - name: Fix Gradle Configuration
       run: |
         chmod +x gradlew
-        # Remove corrupted wrapper and regenerate with very old version
+        # Remove corrupted wrapper and regenerate
         rm -f gradle/wrapper/gradle-wrapper.jar
-        # Use gradle directly to regenerate wrapper with very old version
-        gradle wrapper --gradle-version=6.7.1 --distribution-type=bin
+        # Use gradle directly to regenerate wrapper
+        gradle wrapper --gradle-version=7.6 --distribution-type=bin
         
-    - name: Create Working Configuration
+    - name: Create Proper Configuration
       run: |
-        # Create a working build.gradle
+        # Create a proper build.gradle with NO repositories (they go in settings.gradle)
         cat > build.gradle << 'EOF'
         buildscript {
-            repositories {
-                google()
-                mavenCentral()
-            }
             dependencies {
                 classpath 'com.android.tools.build:gradle:7.4.2'
             }
         }
 
         allprojects {
-            repositories {
-                google()
-                mavenCentral()
-                maven { url 'https://api.xposed.info/' }
-            }
+            // No repositories here - they're defined in settings.gradle
         }
 
         task clean(type: Delete) {
@@ -69,8 +61,25 @@ jobs:
         }
         EOF
         
-        # Create a working settings.gradle
+        # Create a proper settings.gradle with ALL repositories
         cat > settings.gradle << 'EOF'
+        pluginManagement {
+            repositories {
+                gradlePluginPortal()
+                google()
+                mavenCentral()
+            }
+        }
+        dependencyResolutionManagement {
+            repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+            repositories {
+                gradlePluginPortal()
+                google()
+                mavenCentral()
+                maven { url 'https://api.xposed.info/' }
+            }
+        }
+
         rootProject.name = "XposedModule"
         include ':app'
         EOF
