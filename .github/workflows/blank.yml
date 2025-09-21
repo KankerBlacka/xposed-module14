@@ -44,9 +44,33 @@ jobs:
         
     - name: Fix Repository Configuration
       run: |
-        # Update build.gradle to fix repository configuration
-        sed -i 's/repositories {/repositories {\n        gradlePluginPortal()/' build.gradle
-        sed -i 's/google()/google()\n        mavenCentral()/' build.gradle
+        # Create a new build.gradle with proper repository configuration
+        cat > build.gradle << 'EOF'
+        // Top-level build file where you can add configuration options common to all sub-projects/modules.
+        buildscript {
+            repositories {
+                gradlePluginPortal()
+                google()
+                mavenCentral()
+            }
+            dependencies {
+                classpath 'com.android.tools.build:gradle:7.4.2'
+            }
+        }
+
+        allprojects {
+            repositories {
+                gradlePluginPortal()
+                google()
+                mavenCentral()
+                maven { url 'https://api.xposed.info/' }
+            }
+        }
+
+        task clean(type: Delete) {
+            delete rootProject.buildDir
+        }
+        EOF
         
     - name: Build Debug APK
       run: ./gradlew assembleDebug --no-daemon
