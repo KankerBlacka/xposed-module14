@@ -34,13 +34,19 @@ jobs:
           ~/.gradle/wrapper
         key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
         
-    - name: Fix Gradle Wrapper
+    - name: Fix Gradle Configuration
       run: |
         chmod +x gradlew
         # Remove corrupted wrapper and regenerate
         rm -f gradle/wrapper/gradle-wrapper.jar
         # Use gradle directly to regenerate wrapper
         gradle wrapper --gradle-version=7.6 --distribution-type=bin
+        
+    - name: Fix Repository Configuration
+      run: |
+        # Update build.gradle to fix repository configuration
+        sed -i 's/repositories {/repositories {\n        gradlePluginPortal()/' build.gradle
+        sed -i 's/google()/google()\n        mavenCentral()/' build.gradle
         
     - name: Build Debug APK
       run: ./gradlew assembleDebug --no-daemon
