@@ -24,8 +24,8 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
       with:
-        api-level: 34
-        build-tools: 34.0.0
+        packages: android-34,platform-tools,build-tools;34.0.0
+        accept-android-sdk-licenses: true
         
     - name: Cache Gradle dependencies
       uses: actions/cache@v3
@@ -35,9 +35,11 @@ jobs:
           ~/.gradle/wrapper
         key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
         
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
-      
+    - name: Fix Gradle Wrapper
+      run: |
+        chmod +x gradlew
+        ./gradlew wrapper --gradle-version=7.6
+        
     - name: Build Debug APK
       run: ./gradlew assembleDebug --no-daemon
         
