@@ -32,6 +32,7 @@ jobs:
         rm -rf .gradle/ build/ app/build/ gradle/ gradlew gradlew.bat
         rm -f build.gradle settings.gradle gradle.properties local.properties app/build.gradle
         rm -rf app/src/main/res/layout/
+        rm -rf app/src/main/java/
         
         mkdir -p app/src/main/java/com/example/xposedmodule
         mkdir -p app/src/main/res/values
