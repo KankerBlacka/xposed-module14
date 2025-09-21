@@ -72,6 +72,29 @@ jobs:
         }
         EOF
         
+        # Create a new settings.gradle with proper repository configuration
+        cat > settings.gradle << 'EOF'
+        pluginManagement {
+            repositories {
+                gradlePluginPortal()
+                google()
+                mavenCentral()
+            }
+        }
+        dependencyResolutionManagement {
+            repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+            repositories {
+                gradlePluginPortal()
+                google()
+                mavenCentral()
+                maven { url 'https://api.xposed.info/' }
+            }
+        }
+
+        rootProject.name = "XposedModule"
+        include ':app'
+        EOF
+        
     - name: Build Debug APK
       run: ./gradlew assembleDebug --no-daemon
         
