@@ -41,9 +41,13 @@ jobs:
         rm -f settings.gradle
         rm -f gradle.properties
         
-        # Create clean build.gradle with NO repositories
+        # Create clean build.gradle with buildscript repositories
         cat > build.gradle << 'EOF'
         buildscript {
+            repositories {
+                google()
+                mavenCentral()
+            }
             dependencies {
                 classpath 'com.android.tools.build:gradle:7.4.2'
             }
