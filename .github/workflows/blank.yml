@@ -37,7 +37,9 @@ jobs:
     - name: Fix Gradle Wrapper
       run: |
         chmod +x gradlew
-        ./gradlew wrapper --gradle-version=7.6
+        # Remove corrupted wrapper and regenerate
+        rm -f gradle/wrapper/gradle-wrapper.jar
+        ./gradlew wrapper --gradle-version=7.6 --distribution-type=bin
         
     - name: Build Debug APK
       run: ./gradlew assembleDebug --no-daemon
